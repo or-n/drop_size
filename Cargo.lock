@@ -62,7 +62,7 @@ name = "array"
 version = "0.1.0"
 source = "git+https://github.com/or-n/rust-minimalist-utils.git#0e5d5d9ecbedc8ec1e4e48cc78d7077134cba56e"
 dependencies = [
- "itertools",
+ "itertools 0.11.0",
 ]
 
 [[package]]
@@ -200,6 +200,7 @@ dependencies = [
  "clap",
  "clap_derive",
  "frames",
+ "itertools 0.13.0",
  "num",
  "pixels",
 ]
@@ -314,6 +315,15 @@ name = "itertools"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]

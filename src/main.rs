@@ -5,6 +5,7 @@ mod paths;
 mod video;
 
 use clap::Parser;
+use num::point::_3::*;
 
 /// Simple program to determine drop size
 #[derive(Parser, Debug)]
@@ -28,7 +29,15 @@ struct Args {
         required_if_eq("make_new_frames", "true"),
         help = "Hex color code (e.g., #FF5733), in quotes"
     )]
-    color: Option<String>,
+    start_color: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "COLOR",
+        required_if_eq("make_new_frames", "true"),
+        help = "Hex color code (e.g., #FF5733), in quotes"
+    )]
+    end_color: Option<String>,
 }
 
 fn main() {
@@ -51,12 +60,15 @@ fn main() {
         old_frames::make_directory(&args.input_file, &file, fcount);
     }
     if args.make_new_frames {
-        if let Some(text) = args.color {
-            let color = hex_color::decode(&text).expect("hex color");
+        if let (Some(text1), Some(text2)) = (args.start_color, args.end_color) {
+            let start_color =
+                hex_color::decode(&text1).expect("start hex color");
+            let end_color = hex_color::decode(&text2).expect("end hex color");
             new_frames::make_directory(
                 &file,
                 fcount,
-                color.map(|c| c as f32 / 255.),
+                _3(start_color.map(|c| c as f32 / 255.)),
+                _3(end_color.map(|c| c as f32 / 255.)),
             );
         }
     }
