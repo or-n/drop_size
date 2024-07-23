@@ -2,10 +2,9 @@ mod hex_color;
 mod new_frames;
 mod old_frames;
 mod paths;
+mod video;
 
 use clap::Parser;
-use paths::*;
-use std::path::Path;
 
 /// Simple program to determine drop size
 #[derive(Parser, Debug)]
@@ -32,33 +31,10 @@ struct Args {
     color: Option<String>,
 }
 
-fn make_video_from_new_frames(
-    file: &str,
-    fps: frames::per_second::FPS,
-    fcount: u32,
-) {
-    let new_frames_dir = new_frames_dir(file);
-    if !std::path::Path::new(&new_frames_dir).exists() {
-        println!("{new_frames_dir} does not exist");
-        return;
-    }
-    let output_file = new_video_file(file);
-    println!("saving video");
-    frames::to_video::save(
-        &format!("{}/{}", new_frames_dir, file),
-        &output_file,
-        &format!("{}/{}", fps.numerator, fps.denumerator),
-        fcount,
-        None,
-    )
-    .expect("save video");
-    println!("{output_file} saved");
-}
-
 fn main() {
     let start = std::time::Instant::now();
     let args = Args::parse();
-    let input_path = Path::new(&args.input_file);
+    let input_path = std::path::Path::new(&args.input_file);
     if !input_path.exists() {
         println!("{input_path:?} does not exist");
         return;
@@ -85,7 +61,7 @@ fn main() {
         }
     }
     if args.make_video {
-        make_video_from_new_frames(&file, fps, fcount);
+        video::make_from_new_frames(&file, fps, fcount);
     }
     println!("elapsed time: {:.2?}", start.elapsed());
 }
