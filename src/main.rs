@@ -72,7 +72,7 @@ fn main() {
     let fcount = frames::count::extract(&args.input_file).expect("fcount");
     println!("{file}: {fps:?}, {fcount} frames");
     if args.make_old_frames {
-        old_frames::make_directory(&file, fcount);
+        old_frames::make_directory(&args.input_file, &file, fcount);
     }
     if args.make_new_frames {
         if let Some(text) = args.color {

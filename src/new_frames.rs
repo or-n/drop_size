@@ -13,8 +13,6 @@ fn modify_pixels(
     pixels: &mut Vec<f32>,
     color: [f32; 3],
 ) {
-    //const DROP_COLOR: [f32; 3] =
-    //    [0.2235294117647059, 0.396078431372549, 0.5294117647058824];
     let mut x = 0;
     let mut y = 0;
     let mut positions = Vec::new();
