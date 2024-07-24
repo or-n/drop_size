@@ -10,8 +10,6 @@ use pixels;
 use pixels::dimensions::Dimensions;
 use std::io::Write;
 
-const THRESHOLD: f32 = 0.04;
-
 #[inline]
 fn distance(color1: _3<f32>, color2: _3<f32>) -> f32 {
     let delta = color1 - color2;
@@ -53,13 +51,15 @@ fn modify_pixels(
     dimensions: &Dimensions,
     pixels: &mut Vec<f32>,
     color: _3<f32>,
+    threshold: f32,
+    size_overestimate: f32,
 ) -> Option<f32> {
     let mut x = 0;
     let mut y = 0;
     let mut positions = Vec::new();
     for pixel in pixels.chunks_exact_mut(4) {
         if let [r, g, b, _a] = pixel {
-            if distance(color, _3([*r, *g, *b])) > THRESHOLD {
+            if distance(color, _3([*r, *g, *b])) > threshold {
                 *r = 0.0;
                 *g = 0.0;
                 *b = 0.0;
@@ -81,9 +81,9 @@ fn modify_pixels(
         .map(|point| _2(point.0.map(|c| c as f32)))
         .collect();
     let median = median(&mut f32_positions);
-    let assumed_max = 400.;
     f32_positions.retain(|position| {
-        (*position - median).length_squared() < assumed_max * assumed_max
+        (*position - median).length_squared()
+            < size_overestimate * size_overestimate
     });
     let hull = convex_hull(&f32_positions);
     let hull_len_inverse = 1.0 / (hull.len() as f32);
@@ -128,6 +128,8 @@ pub fn make_directory(
     fcount: u32,
     start_color: _3<f32>,
     end_color: _3<f32>,
+    threshold: f32,
+    size_overestimate: f32,
 ) {
     let old_frames_dir = old_frames_dir(file);
     let new_frames_dir = new_frames_dir(file);
@@ -151,7 +153,13 @@ pub fn make_directory(
             f32_ratio(frame - 1, fcount - 1),
             &[start_color, end_color],
         );
-        if let Some(size) = modify_pixels(&dimensions, &mut pixels, color) {
+        if let Some(size) = modify_pixels(
+            &dimensions,
+            &mut pixels,
+            color,
+            threshold,
+            size_overestimate,
+        ) {
             sizes.push(size);
         }
         pixels::write::f32_array(

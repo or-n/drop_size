@@ -28,7 +28,7 @@ struct Args {
         long,
         value_name = "COLOR",
         required_if_eq("make_new_frames", "true"),
-        help = "Hex color code (e.g., #FF5733), in quotes"
+        help = "Hex color code (e.g., #00457b), in quotes"
     )]
     start_color: Option<String>,
 
@@ -36,9 +36,25 @@ struct Args {
         long,
         value_name = "COLOR",
         required_if_eq("make_new_frames", "true"),
-        help = "Hex color code (e.g., #FF5733), in quotes"
+        help = "Hex color code (e.g., #00457b), in quotes"
     )]
     end_color: Option<String>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_new_frames", "true"),
+        help = "threshold for color (e.g. 0.04)"
+    )]
+    threshold: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_new_frames", "true"),
+        help = "size overestimate to detect outliers (e.g. 400)"
+    )]
+    size_overestimate: Option<f32>,
 }
 
 fn main() {
@@ -70,6 +86,8 @@ fn main() {
                 fcount,
                 _3(start_color.map(|c| c as f32 / 255.)),
                 _3(end_color.map(|c| c as f32 / 255.)),
+                args.threshold.expect("threshold"),
+                args.size_overestimate.expect("size_overestimate"),
             );
         }
     }
