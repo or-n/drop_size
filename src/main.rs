@@ -19,6 +19,9 @@ struct Args {
     make_old_frames: bool,
 
     #[arg(long)]
+    make_sizes: bool,
+
+    #[arg(long)]
     make_new_frames: bool,
 
     #[arg(long)]
@@ -27,7 +30,7 @@ struct Args {
     #[arg(
         long,
         value_name = "COLOR",
-        required_if_eq("make_new_frames", "true"),
+        required_if_eq("make_sizes", "true"),
         help = "Hex color code (e.g., #00457b), in quotes"
     )]
     start_color: Option<String>,
@@ -35,7 +38,7 @@ struct Args {
     #[arg(
         long,
         value_name = "COLOR",
-        required_if_eq("make_new_frames", "true"),
+        required_if_eq("make_sizes", "true"),
         help = "Hex color code (e.g., #00457b), in quotes"
     )]
     end_color: Option<String>,
@@ -43,7 +46,7 @@ struct Args {
     #[arg(
         long,
         value_name = "number",
-        required_if_eq("make_new_frames", "true"),
+        required_if_eq("make_sizes", "true"),
         help = "threshold for color (e.g. 0.04)"
     )]
     threshold: Option<f32>,
@@ -51,7 +54,7 @@ struct Args {
     #[arg(
         long,
         value_name = "number",
-        required_if_eq("make_new_frames", "true"),
+        required_if_eq("make_sizes", "true"),
         help = "size overestimate to detect outliers (e.g. 400)"
     )]
     size_overestimate: Option<f32>,
@@ -59,7 +62,7 @@ struct Args {
     #[arg(
         long,
         value_name = "number",
-        required_if_eq("make_new_frames", "true"),
+        required_if_eq("make_sizes", "true"),
         help = "threads (e.g. 4)"
     )]
     threads: Option<u32>,
@@ -84,7 +87,7 @@ fn main() {
     if args.make_old_frames {
         old_frames::make_directory(&args.input_file, &file, fcount);
     }
-    if args.make_new_frames {
+    if args.make_sizes {
         if let (Some(text1), Some(text2)) = (args.start_color, args.end_color) {
             let start_color =
                 hex_color::decode(&text1).expect("start hex color");
@@ -95,8 +98,9 @@ fn main() {
                 _3(start_color.map(|c| c as f32 / 255.)),
                 _3(end_color.map(|c| c as f32 / 255.)),
                 args.threshold.expect("threshold"),
-                args.size_overestimate.expect("size_overestimate"),
+                args.size_overestimate.expect("size-overestimate"),
                 args.threads.expect("threads"),
+                args.make_new_frames,
             );
         }
     }

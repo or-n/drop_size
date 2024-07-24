@@ -127,6 +127,7 @@ pub fn make_directory(
     threshold: f32,
     size_overestimate: f32,
     threads: u32,
+    make_new_frames: bool,
 ) {
     let old_frames_dir = old_frames_dir(file);
     let new_frames_dir = new_frames_dir(file);
@@ -141,7 +142,11 @@ pub fn make_directory(
     let chunk_size = (fcount + threads - 1) / threads;
     let results = Arc::new(Mutex::new(Vec::new()));
     let mut handles = vec![];
-    println!("saving new frames");
+    print!("making sizes");
+    if make_new_frames {
+        print!(" and new frames");
+    }
+    println!();
     for i in 0..threads {
         let results = Arc::clone(&results);
         let old_frame_file = Arc::clone(&old_frame_file);
@@ -169,13 +174,15 @@ pub fn make_directory(
                 ) {
                     local_results.push((frame, size));
                 }
-                pixels::write::f32_array(
-                    dimensions,
-                    pixels,
-                    &format!("{new_frame_file}_{index}.png"),
-                )
-                .expect("dimensions")
-                .expect("save");
+                if make_new_frames {
+                    pixels::write::f32_array(
+                        dimensions,
+                        pixels,
+                        &format!("{new_frame_file}_{index}.png"),
+                    )
+                    .expect("dimensions")
+                    .expect("save");
+                }
             }
             let mut results = results.lock().unwrap();
             results.extend(local_results);
