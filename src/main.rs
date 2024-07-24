@@ -55,6 +55,14 @@ struct Args {
         help = "size overestimate to detect outliers (e.g. 400)"
     )]
     size_overestimate: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_new_frames", "true"),
+        help = "threads (e.g. 4)"
+    )]
+    threads: Option<u32>,
 }
 
 fn main() {
@@ -88,6 +96,7 @@ fn main() {
                 _3(end_color.map(|c| c as f32 / 255.)),
                 args.threshold.expect("threshold"),
                 args.size_overestimate.expect("size_overestimate"),
+                args.threads.expect("threads"),
             );
         }
     }

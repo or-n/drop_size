@@ -9,6 +9,8 @@ use num::scale::*;
 use pixels;
 use pixels::dimensions::Dimensions;
 use std::io::Write;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 #[inline]
 fn distance(color1: _3<f32>, color2: _3<f32>) -> f32 {
@@ -117,11 +119,6 @@ fn modify_pixels(
     Some(mean_size_square.sqrt())
 }
 
-fn clear_line() {
-    print!("\x1B[2K\r");
-    std::io::stdout().flush().expect("flush");
-}
-
 pub fn make_directory(
     file: &str,
     fcount: u32,
@@ -129,52 +126,73 @@ pub fn make_directory(
     end_color: _3<f32>,
     threshold: f32,
     size_overestimate: f32,
+    threads: u32,
 ) {
     let old_frames_dir = old_frames_dir(file);
     let new_frames_dir = new_frames_dir(file);
-    let old_frame_file = format!("{old_frames_dir}/{file}");
-    let new_frame_file = format!("{new_frames_dir}/{file}");
+    let old_frame_file = Arc::new(format!("{old_frames_dir}/{file}"));
+    let new_frame_file = Arc::new(format!("{new_frames_dir}/{file}"));
     if !std::path::Path::new(&old_frames_dir).exists() {
         println!("{old_frames_dir} does not exist");
         return;
     }
     std::fs::create_dir_all(&new_frames_dir).expect("new frames directory");
     let index_digits = (fcount.ilog10() + 1) as usize;
-    let mut sizes = Vec::new();
-    for frame in 1..=fcount {
-        print!("\rsaving new frames: {frame} ");
-        std::io::stdout().flush().expect("flush");
-        let index = format!("{:0width$}", frame, width = index_digits);
-        let (dimensions, mut pixels) =
-            pixels::read::f32_array(&format!("{old_frame_file}_{index}.png"))
+    let chunk_size = (fcount + threads - 1) / threads;
+    let results = Arc::new(Mutex::new(Vec::new()));
+    let mut handles = vec![];
+    println!("saving new frames");
+    for i in 0..threads {
+        let results = Arc::clone(&results);
+        let old_frame_file = Arc::clone(&old_frame_file);
+        let new_frame_file = Arc::clone(&new_frame_file);
+        let start = i * chunk_size + 1;
+        let end = ((i + 1) * chunk_size).min(fcount);
+        let handle = thread::spawn(move || {
+            let mut local_results = Vec::new();
+            for frame in start..end {
+                let index = format!("{:0width$}", frame, width = index_digits);
+                let (dimensions, mut pixels) = pixels::read::f32_array(
+                    &format!("{old_frame_file}_{index}.png"),
+                )
                 .expect("read");
-        let color = f32::interpolate(
-            f32_ratio(frame - 1, fcount - 1),
-            &[start_color, end_color],
-        );
-        if let Some(size) = modify_pixels(
-            &dimensions,
-            &mut pixels,
-            color,
-            threshold,
-            size_overestimate,
-        ) {
-            sizes.push(size);
-        }
-        pixels::write::f32_array(
-            dimensions,
-            pixels,
-            &format!("{new_frame_file}_{index}.png"),
-        )
-        .expect("dimensions")
-        .expect("save");
+                let color = f32::interpolate(
+                    f32_ratio(frame - 1, fcount - 1),
+                    &[start_color, end_color],
+                );
+                if let Some(size) = modify_pixels(
+                    &dimensions,
+                    &mut pixels,
+                    color,
+                    threshold,
+                    size_overestimate,
+                ) {
+                    local_results.push((frame, size));
+                }
+                pixels::write::f32_array(
+                    dimensions,
+                    pixels,
+                    &format!("{new_frame_file}_{index}.png"),
+                )
+                .expect("dimensions")
+                .expect("save");
+            }
+            let mut results = results.lock().unwrap();
+            results.extend(local_results);
+        });
+
+        handles.push(handle);
     }
-    clear_line();
+    for handle in handles {
+        handle.join().unwrap();
+    }
+    let mut results = results.lock().unwrap();
+    results.sort_by(|a, b| a.0.cmp(&b.0));
     let sizes_file =
         std::fs::File::create(sizes_file(file)).expect("sizes file");
     let mut writer = std::io::BufWriter::new(sizes_file);
     writeln!(writer, "frame,size").expect("header");
-    for (i, size) in sizes.iter().enumerate() {
+    for (i, size) in results.iter() {
         writeln!(writer, "{},{}", i + 1, size).expect("size");
     }
 }
