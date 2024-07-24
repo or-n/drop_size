@@ -56,17 +56,25 @@ fn modify_pixels(
     threshold: f32,
     size_overestimate: f32,
 ) -> Option<f32> {
+    let size = 400.;
+    let image_center =
+        _2([dimensions.width as f32, dimensions.height as f32]).scale(0.5);
     let mut x = 0;
     let mut y = 0;
     let mut positions = Vec::new();
     for pixel in pixels.chunks_exact_mut(4) {
+        let point = _2([x as f32, y as f32]);
         if let [r, g, b, _a] = pixel {
             if distance(color, _3([*r, *g, *b])) > threshold {
                 *r = 0.0;
                 *g = 0.0;
                 *b = 0.0;
+            } else if (point - image_center).length_squared() < size * size {
+                positions.push(point);
             } else {
-                positions.push(_2([x, y]));
+                *r = 1.0;
+                *g = 0.0;
+                *b = 0.0;
             }
             x += 1;
             if x == dimensions.width {
@@ -78,25 +86,22 @@ fn modify_pixels(
     if positions.len() == 0 {
         return None;
     }
-    let mut f32_positions: Vec<_2<f32>> = positions
-        .iter()
-        .map(|point| _2(point.0.map(|c| c as f32)))
-        .collect();
-    let median = median(&mut f32_positions);
-    f32_positions.retain(|position| {
+    let median = median(&mut positions);
+    positions.retain(|position| {
         (*position - median).length_squared()
             < size_overestimate * size_overestimate
     });
-    let hull = convex_hull(&f32_positions);
-    let full = insert_intermediate_points(&hull, 0.1);
+    let hull = convex_hull(&positions);
+    let full = insert_intermediate_points(&hull, 1.);
     let full_len_inverse = 1.0 / (full.len() as f32);
     let center_f32 = full
         .iter()
         .fold(_2([0., 0.]), |a, b| a + (*b).scale(full_len_inverse));
     let center_i32 = _2(center_f32.0.map(|c| c as i32));
-    let mean_size_square = full.iter().fold(0., |a, b| {
-        a + (*b - center_f32).length_squared() * full_len_inverse
-    });
+    let mut mean_size_square = full
+        .iter()
+        .fold(0., |a, b| a + (*b - center_f32).length_squared());
+    mean_size_square *= full_len_inverse;
     let hull: Vec<_2<i32>> = full
         .iter()
         .map(|point| _2(point.0.map(|c| c as i32)))
@@ -155,7 +160,7 @@ pub fn make_directory(
         let end = ((i + 1) * chunk_size).min(fcount);
         let handle = thread::spawn(move || {
             let mut local_results = Vec::new();
-            for frame in start..end {
+            for frame in start..=end {
                 let index = format!("{:0width$}", frame, width = index_digits);
                 let (dimensions, mut pixels) = pixels::read::f32_array(
                     &format!("{old_frame_file}_{index}.jpg"),
@@ -200,6 +205,6 @@ pub fn make_directory(
     let mut writer = std::io::BufWriter::new(sizes_file);
     writeln!(writer, "frame,size").expect("header");
     for (i, size) in results.iter() {
-        writeln!(writer, "{},{}", i + 1, size).expect("size");
+        writeln!(writer, "{},{}", i, size).expect("size");
     }
 }
