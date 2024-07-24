@@ -86,15 +86,14 @@ fn modify_pixels(
             < size_overestimate * size_overestimate
     });
     let hull = convex_hull(&f32_positions);
-    let hull_len_inverse = 1.0 / (hull.len() as f32);
     let full = insert_intermediate_points(&hull, 0.1);
     let full_len_inverse = 1.0 / (full.len() as f32);
     let center_f32 = full
         .iter()
         .fold(_2([0., 0.]), |a, b| a + (*b).scale(full_len_inverse));
     let center_i32 = _2(center_f32.0.map(|c| c as i32));
-    let mean_size_square = hull.iter().fold(0., |a, b| {
-        a + (*b - center_f32).length_squared() * hull_len_inverse
+    let mean_size_square = full.iter().fold(0., |a, b| {
+        a + (*b - center_f32).length_squared() * full_len_inverse
     });
     let hull: Vec<_2<i32>> = full
         .iter()
