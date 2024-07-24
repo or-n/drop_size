@@ -142,7 +142,7 @@ pub fn make_directory(
     let chunk_size = (fcount + threads - 1) / threads;
     let results = Arc::new(Mutex::new(Vec::new()));
     let mut handles = vec![];
-    print!("making sizes");
+    print!("saving sizes");
     if make_new_frames {
         print!(" and new frames");
     }
@@ -158,7 +158,7 @@ pub fn make_directory(
             for frame in start..end {
                 let index = format!("{:0width$}", frame, width = index_digits);
                 let (dimensions, mut pixels) = pixels::read::f32_array(
-                    &format!("{old_frame_file}_{index}.png"),
+                    &format!("{old_frame_file}_{index}.jpg"),
                 )
                 .expect("read");
                 let color = f32::interpolate(
@@ -178,7 +178,7 @@ pub fn make_directory(
                     pixels::write::f32_array(
                         dimensions,
                         pixels,
-                        &format!("{new_frame_file}_{index}.png"),
+                        &format!("{new_frame_file}_{index}.jpg"),
                     )
                     .expect("dimensions")
                     .expect("save");
