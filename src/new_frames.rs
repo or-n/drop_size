@@ -1,14 +1,15 @@
+use crate::convex_hull::*;
 use crate::paths::*;
 use itertools::iproduct;
 use num::interpolate::*;
+use num::operation::length::*;
 use num::point::{dot::*, _2::*, _3::*};
 use num::ratio::f32::*;
+use num::scale::*;
 use pixels;
 use pixels::dimensions::Dimensions;
-use std::collections::HashSet;
 use std::io::Write;
 
-const SIZE: i32 = 2;
 const THRESHOLD: f32 = 0.04;
 
 #[inline]
@@ -31,40 +32,28 @@ fn index(dimensions: &Dimensions, point: _2<i32>) -> Option<usize> {
     }
 }
 
-fn dilate(dimensions: &Dimensions, pixels: &mut Vec<f32>, color: _3<f32>) {
-    let mut indices = HashSet::new();
-    for (y, x) in
-        iproduct!(0..dimensions.height as i32, 0..dimensions.width as i32)
-    {
-        let point = _2([x, y]);
-        if let Some(i) = index(dimensions, point) {
-            let r = pixels[i + 0];
-            let g = pixels[i + 1];
-            let b = pixels[i + 2];
-            if distance(color, _3([r, g, b])) <= THRESHOLD {
-                for (dy, dx) in iproduct!(-SIZE..=SIZE, -SIZE..=SIZE) {
-                    let delta = _2([dx, dy]);
-                    if let Some(index) = index(dimensions, point + delta) {
-                        indices.insert(index);
-                    }
-                }
-            }
-        }
-    }
-    let [r, g, b] = color.0;
-    for index in indices {
-        pixels[index + 0] = r;
-        pixels[index + 1] = g;
-        pixels[index + 2] = b;
-    }
+fn median(points: &mut Vec<_2<f32>>) -> _2<f32> {
+    let median = points.len() / 2;
+    points.sort_by(|a, b| {
+        let [a0, _a1] = a.0;
+        let [b0, _b1] = b.0;
+        a0.partial_cmp(&b0).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let median_axis0 = points[median].0[0];
+    points.sort_by(|a, b| {
+        let [_a0, a1] = a.0;
+        let [_b0, b1] = b.0;
+        a1.partial_cmp(&b1).unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let median_axis1 = points[median].0[1];
+    _2([median_axis0, median_axis1])
 }
 
 fn modify_pixels(
     dimensions: &Dimensions,
     pixels: &mut Vec<f32>,
     color: _3<f32>,
-) {
-    dilate(dimensions, pixels, color);
+) -> Option<f32> {
     let mut x = 0;
     let mut y = 0;
     let mut positions = Vec::new();
@@ -84,16 +73,49 @@ fn modify_pixels(
             }
         }
     }
-    let n = positions.len() as u32;
-    let sum = positions.into_iter().fold(_2([0, 0]), std::ops::Add::add);
-    let center = _2(sum.0.map(|c| (c / n) as i32));
+    if positions.len() == 0 {
+        return None;
+    }
+    let mut f32_positions: Vec<_2<f32>> = positions
+        .iter()
+        .map(|point| _2(point.0.map(|c| c as f32)))
+        .collect();
+    let median = median(&mut f32_positions);
+    let assumed_max = 400.;
+    f32_positions.retain(|position| {
+        (*position - median).length_squared() < assumed_max * assumed_max
+    });
+    let hull = convex_hull(&f32_positions);
+    let hull_len_inverse = 1.0 / (hull.len() as f32);
+    let full = insert_intermediate_points(&hull, 0.1);
+    let full_len_inverse = 1.0 / (full.len() as f32);
+    let center_f32 = full
+        .iter()
+        .fold(_2([0., 0.]), |a, b| a + (*b).scale(full_len_inverse));
+    let center_i32 = _2(center_f32.0.map(|c| c as i32));
+    let mean_size_square = hull.iter().fold(0., |a, b| {
+        a + (*b - center_f32).length_squared() * hull_len_inverse
+    });
+    let hull: Vec<_2<i32>> = full
+        .iter()
+        .map(|point| _2(point.0.map(|c| c as i32)))
+        .collect();
+    for point in &hull {
+        if let Some(index) = index(dimensions, *point) {
+            pixels[index + 0] = 0.;
+            pixels[index + 1] = 1.;
+            pixels[index + 2] = 0.;
+        }
+    }
+    const SIZE: i32 = 2;
     for (dy, dx) in iproduct!(-SIZE..=SIZE, -SIZE..=SIZE) {
-        if let Some(index) = index(dimensions, center + _2([dx, dy])) {
+        if let Some(index) = index(dimensions, center_i32 + _2([dx, dy])) {
             pixels[index + 0] = 1.;
             pixels[index + 1] = 1.;
             pixels[index + 2] = 1.;
         }
     }
+    Some(mean_size_square.sqrt())
 }
 
 fn clear_line() {
@@ -117,6 +139,7 @@ pub fn make_directory(
     }
     std::fs::create_dir_all(&new_frames_dir).expect("new frames directory");
     let index_digits = (fcount.ilog10() + 1) as usize;
+    let mut sizes = Vec::new();
     for frame in 1..=fcount {
         print!("\rsaving new frames: {frame} ");
         std::io::stdout().flush().expect("flush");
@@ -128,7 +151,9 @@ pub fn make_directory(
             f32_ratio(frame - 1, fcount - 1),
             &[start_color, end_color],
         );
-        modify_pixels(&dimensions, &mut pixels, color);
+        if let Some(size) = modify_pixels(&dimensions, &mut pixels, color) {
+            sizes.push(size);
+        }
         pixels::write::f32_array(
             dimensions,
             pixels,
@@ -138,4 +163,11 @@ pub fn make_directory(
         .expect("save");
     }
     clear_line();
+    let sizes_file =
+        std::fs::File::create(sizes_file(file)).expect("sizes file");
+    let mut writer = std::io::BufWriter::new(sizes_file);
+    writeln!(writer, "frame,size").expect("header");
+    for (i, size) in sizes.iter().enumerate() {
+        writeln!(writer, "{},{}", i + 1, size).expect("size");
+    }
 }

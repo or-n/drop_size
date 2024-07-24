@@ -1,3 +1,4 @@
+mod convex_hull;
 mod hex_color;
 mod new_frames;
 mod old_frames;
