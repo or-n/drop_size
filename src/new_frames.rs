@@ -1,9 +1,12 @@
 use crate::convex_hull::*;
 use crate::paths::*;
+use color::hsl::linear::*;
+use color::hsl::*;
+use color::rgb::*;
 use itertools::iproduct;
 use num::interpolate::*;
 use num::operation::length::*;
-use num::point::{dot::*, _2::*, _3::*};
+use num::point::{_2::*, _3::*};
 use num::ratio::f32::*;
 use num::scale::*;
 use pixels;
@@ -14,8 +17,13 @@ use std::thread;
 
 #[inline]
 fn distance(color1: _3<f32>, color2: _3<f32>) -> f32 {
-    let delta = color1 - color2;
-    delta.dot(delta) / 3.
+    let c1: HSL<f32> = RGB(color1).into();
+    let c2: HSL<f32> = RGB(color2).into();
+    let linear1: LinearHSL<f32> = c1.into();
+    let linear2: LinearHSL<f32> = c2.into();
+    let hue1 = linear1.0 .0;
+    let hue2 = linear2.0 .0;
+    (hue1 - hue2).length_squared() / 2.
 }
 
 #[inline]
@@ -56,9 +64,6 @@ fn modify_pixels(
     threshold: f32,
     size_overestimate: f32,
 ) -> Option<f32> {
-    let size = 400.;
-    let image_center =
-        _2([dimensions.width as f32, dimensions.height as f32]).scale(0.5);
     let mut x = 0;
     let mut y = 0;
     let mut positions = Vec::new();
@@ -69,12 +74,8 @@ fn modify_pixels(
                 *r = 0.0;
                 *g = 0.0;
                 *b = 0.0;
-            } else if (point - image_center).length_squared() < size * size {
-                positions.push(point);
             } else {
-                *r = 1.0;
-                *g = 0.0;
-                *b = 0.0;
+                positions.push(point);
             }
             x += 1;
             if x == dimensions.width {
@@ -92,16 +93,15 @@ fn modify_pixels(
             < size_overestimate * size_overestimate
     });
     let hull = convex_hull(&positions);
-    let full = insert_intermediate_points(&hull, 1.);
+    let full = insert_intermediate_points(&hull, 0.1);
     let full_len_inverse = 1.0 / (full.len() as f32);
     let center_f32 = full
         .iter()
         .fold(_2([0., 0.]), |a, b| a + (*b).scale(full_len_inverse));
     let center_i32 = _2(center_f32.0.map(|c| c as i32));
-    let mut mean_size_square = full
-        .iter()
-        .fold(0., |a, b| a + (*b - center_f32).length_squared());
-    mean_size_square *= full_len_inverse;
+    let mean_size_square = full.iter().fold(0., |a, b| {
+        a + (*b - center_f32).length_squared() * full_len_inverse
+    });
     let hull: Vec<_2<i32>> = full
         .iter()
         .map(|point| _2(point.0.map(|c| c as i32)))
