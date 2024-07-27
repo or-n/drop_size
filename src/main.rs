@@ -46,9 +46,25 @@ struct Args {
         long,
         value_name = "number",
         required_if_eq("make_sizes", "true"),
-        help = "threshold for color (e.g. 0.04)"
+        help = "threshold for hue (e.g. 0.04)"
     )]
-    threshold: Option<f32>,
+    hue_threshold: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_sizes", "true"),
+        help = "threshold for saturation and lightness (e.g. 0.04)"
+    )]
+    sl_threshold: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_sizes", "true"),
+        help = "threshold for RGB (e.g. 0.04)"
+    )]
+    rgb_threshold: Option<f32>,
 
     #[arg(
         long,
@@ -97,7 +113,11 @@ fn main() {
             fcount,
             color(args.start_color),
             color(args.end_color),
-            args.threshold.expect("threshold"),
+            utils::color::Threshold {
+                hue: args.hue_threshold.expect("hue threshold"),
+                sl: args.sl_threshold.expect("sl threshold"),
+                rgb: args.rgb_threshold.expect("rgb threshold"),
+            },
             args.size_overestimate.expect("size-overestimate"),
             args.threads.expect("threads"),
             args.make_new_frames,

@@ -25,7 +25,7 @@ struct Result<T> {
 fn new_frame(
     image: &mut Image,
     color: _3<f32>,
-    threshold: f32,
+    threshold: color::Threshold,
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
     let mut positions = color::hue_filter(image, color, threshold);
@@ -77,7 +77,7 @@ pub fn make_directory(
     fcount: u32,
     start_color: _3<f32>,
     end_color: _3<f32>,
-    threshold: f32,
+    threshold: color::Threshold,
     size_overestimate: f32,
     threads: u32,
     make_new_frames: bool,
