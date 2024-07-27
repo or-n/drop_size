@@ -11,12 +11,23 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+struct Result<T> {
+    min: T,
+    lower_quartile: T,
+    median: T,
+    higher_quartile: T,
+    max: T,
+    mean: T,
+    center_x: T,
+    center_y: T,
+}
+
 fn new_frame(
     image: &mut Image,
     color: _3<f32>,
     threshold: f32,
     size_overestimate: f32,
-) -> Option<f32> {
+) -> Option<Result<f32>> {
     let mut positions = color::hue_filter(image, color, threshold);
     if positions.len() == 0 {
         return None;
@@ -28,13 +39,23 @@ fn new_frame(
     });
     let hull = convex_hull(&positions);
     let dense_hull = insert_intermediate_points(&hull, 0.1);
-    let dense_hull_len_inverse = 1.0 / (dense_hull.len() as f32);
+    let n = dense_hull.len();
+    let dense_hull_len_inverse = 1.0 / (n as f32);
     let center = dense_hull
         .iter()
         .fold(_2([0., 0.]), |a, b| a + (*b).scale(dense_hull_len_inverse));
-    let mean_size_square = dense_hull.iter().fold(0., |a, b| {
-        a + (*b - center).length_squared() * dense_hull_len_inverse
-    });
+    let mut distances_squared: Vec<f32> = dense_hull
+        .iter()
+        .map(|point| (*point - center).length_squared())
+        .collect();
+    distances_squared
+        .sort_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
+    let min = distances_squared[0];
+    let lower_quartile = distances_squared[n / 4];
+    let median = distances_squared[n / 2];
+    let higher_quartile = distances_squared[(n * 3) / 4];
+    let max = distances_squared[n - 1];
+    let mean = distances_squared.iter().sum::<f32>() * dense_hull_len_inverse;
     for point in &dense_hull {
         let point_i32 = _2(point.0.map(|c| c as i32));
         image.set_pixel(point_i32, _3([0., 1., 0.]));
@@ -44,7 +65,16 @@ fn new_frame(
     for (dy, dx) in iproduct!(-size..=size, -size..=size) {
         image.set_pixel(center_i32 + _2([dx, dy]), _3([1., 1., 1.]));
     }
-    Some(mean_size_square.sqrt())
+    Some(Result {
+        min: min.sqrt(),
+        lower_quartile: lower_quartile.sqrt(),
+        median: median.sqrt(),
+        higher_quartile: higher_quartile.sqrt(),
+        max: max.sqrt(),
+        mean: mean.sqrt(),
+        center_x: center.0[0],
+        center_y: center.0[1],
+    })
 }
 
 pub fn make_directory(
@@ -94,10 +124,10 @@ pub fn make_directory(
                     &[start_color, end_color],
                 );
                 let mut image = Image { pixels, dimensions };
-                if let Some(size) =
+                if let Some(result) =
                     new_frame(&mut image, color, threshold, size_overestimate)
                 {
-                    local_results.push((frame, size));
+                    local_results.push((frame, result));
                 }
                 if make_new_frames {
                     pixels::write::f32_array(
@@ -122,8 +152,23 @@ pub fn make_directory(
     let sizes_file =
         std::fs::File::create(sizes_file(file)).expect("sizes file");
     let mut writer = std::io::BufWriter::new(sizes_file);
-    writeln!(writer, "frame,size").expect("header");
-    for (i, size) in results.iter() {
-        writeln!(writer, "{},{}", i, size).expect("size");
+    writeln!(writer, "frame,min,lower_quartile,median,higher_quartile,max,mean,center_x,center_y")
+        .expect("header");
+    for (frame, result) in results.iter() {
+        let fields = [
+            result.min,
+            result.lower_quartile,
+            result.median,
+            result.higher_quartile,
+            result.max,
+            result.mean,
+            result.center_x,
+            result.center_y,
+        ]
+        .into_iter()
+        .map(|field| field.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+        writeln!(writer, "{frame},{fields}").expect("size");
     }
 }
