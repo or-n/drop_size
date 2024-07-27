@@ -1,8 +1,7 @@
-mod convex_hull;
-mod hex_color;
 mod new_frames;
 mod old_frames;
 mod paths;
+mod utils;
 mod video;
 
 use clap::Parser;
@@ -90,7 +89,7 @@ fn main() {
     if args.make_sizes {
         let color = |arg: Option<String>| {
             let text = arg.expect("color arg");
-            let u8 = hex_color::decode(&text).expect("color hex");
+            let u8 = utils::hex_color::decode(&text).expect("color hex");
             _3(u8.map(|c| c as f32 / 255.))
         };
         new_frames::make_directory(
