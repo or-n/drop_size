@@ -88,21 +88,21 @@ fn main() {
         old_frames::make_directory(&args.input_file, &file, fcount);
     }
     if args.make_sizes {
-        if let (Some(text1), Some(text2)) = (args.start_color, args.end_color) {
-            let start_color =
-                hex_color::decode(&text1).expect("start hex color");
-            let end_color = hex_color::decode(&text2).expect("end hex color");
-            new_frames::make_directory(
-                &file,
-                fcount,
-                _3(start_color.map(|c| c as f32 / 255.)),
-                _3(end_color.map(|c| c as f32 / 255.)),
-                args.threshold.expect("threshold"),
-                args.size_overestimate.expect("size-overestimate"),
-                args.threads.expect("threads"),
-                args.make_new_frames,
-            );
-        }
+        let color = |arg: Option<String>| {
+            let text = arg.expect("color arg");
+            let u8 = hex_color::decode(&text).expect("color hex");
+            _3(u8.map(|c| c as f32 / 255.))
+        };
+        new_frames::make_directory(
+            &file,
+            fcount,
+            color(args.start_color),
+            color(args.end_color),
+            args.threshold.expect("threshold"),
+            args.size_overestimate.expect("size-overestimate"),
+            args.threads.expect("threads"),
+            args.make_new_frames,
+        );
     }
     if args.make_video {
         video::make_from_new_frames(&file, fps, fcount);
