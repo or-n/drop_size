@@ -50,11 +50,6 @@ fn new_frame(
         .collect();
     distances_squared
         .sort_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
-    let min = distances_squared[0];
-    let lower_quartile = distances_squared[n / 4];
-    let median = distances_squared[n / 2];
-    let higher_quartile = distances_squared[(n * 3) / 4];
-    let max = distances_squared[n - 1];
     let mean = distances_squared.iter().sum::<f32>() * dense_hull_len_inverse;
     for point in &dense_hull {
         let point_i32 = _2(point.0.map(|c| c as i32));
@@ -66,11 +61,11 @@ fn new_frame(
         image.set_pixel(center_i32 + _2([dx, dy]), _3([1., 1., 1.]));
     }
     Some(Result {
-        min: min.sqrt(),
-        lower_quartile: lower_quartile.sqrt(),
-        median: median.sqrt(),
-        higher_quartile: higher_quartile.sqrt(),
-        max: max.sqrt(),
+        min: distances_squared[0].sqrt(),
+        lower_quartile: distances_squared[n / 4].sqrt(),
+        median: distances_squared[n / 2].sqrt(),
+        higher_quartile: distances_squared[(n * 3) / 4].sqrt(),
+        max: distances_squared[n - 1].sqrt(),
         mean: mean.sqrt(),
         center_x: center.0[0],
         center_y: center.0[1],

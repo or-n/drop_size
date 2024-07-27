@@ -31,7 +31,7 @@ def main():
     ]
     for metric in metrics:
         plt.figure()
-        plt.plot(df['frame'], df[metric], marker='o')
+        plt.plot(df['frame'], df[metric])
         plt.xlabel('frame')
         plt.ylabel(metric)
         plt.title(f"frame vs {metric}")
