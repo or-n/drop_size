@@ -41,18 +41,11 @@ fn index(dimensions: &Dimensions, point: _2<i32>) -> Option<usize> {
 }
 
 fn median(points: &mut Vec<_2<f32>>) -> _2<f32> {
+    use std::cmp::Ordering::Equal;
     let median = points.len() / 2;
-    points.sort_by(|a, b| {
-        let [a0, _a1] = a.0;
-        let [b0, _b1] = b.0;
-        a0.partial_cmp(&b0).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    points.sort_by(|a, b| a.0[0].partial_cmp(&b.0[0]).unwrap_or(Equal));
     let median_axis0 = points[median].0[0];
-    points.sort_by(|a, b| {
-        let [_a0, a1] = a.0;
-        let [_b0, b1] = b.0;
-        a1.partial_cmp(&b1).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    points.sort_by(|a, b| a.0[1].partial_cmp(&b.0[1]).unwrap_or(Equal));
     let median_axis1 = points[median].0[1];
     _2([median_axis0, median_axis1])
 }
@@ -93,33 +86,29 @@ fn modify_pixels(
             < size_overestimate * size_overestimate
     });
     let hull = convex_hull(&positions);
-    let full = insert_intermediate_points(&hull, 0.1);
-    let full_len_inverse = 1.0 / (full.len() as f32);
-    let center_f32 = full
+    let dense_hull = insert_intermediate_points(&hull, 0.1);
+    let dense_hull_len_inverse = 1.0 / (dense_hull.len() as f32);
+    let center = dense_hull
         .iter()
-        .fold(_2([0., 0.]), |a, b| a + (*b).scale(full_len_inverse));
-    let center_i32 = _2(center_f32.0.map(|c| c as i32));
-    let mean_size_square = full.iter().fold(0., |a, b| {
-        a + (*b - center_f32).length_squared() * full_len_inverse
+        .fold(_2([0., 0.]), |a, b| a + (*b).scale(dense_hull_len_inverse));
+    let mean_size_square = dense_hull.iter().fold(0., |a, b| {
+        a + (*b - center).length_squared() * dense_hull_len_inverse
     });
-    let hull: Vec<_2<i32>> = full
-        .iter()
-        .map(|point| _2(point.0.map(|c| c as i32)))
-        .collect();
-    for point in &hull {
-        if let Some(index) = index(dimensions, *point) {
-            pixels[index + 0] = 0.;
-            pixels[index + 1] = 1.;
-            pixels[index + 2] = 0.;
+    let mut modify_pixel = |point, [r, g, b]: [f32; 3]| {
+        if let Some(index) = index(dimensions, point) {
+            pixels[index + 0] = r;
+            pixels[index + 1] = g;
+            pixels[index + 2] = b;
         }
+    };
+    for point in &dense_hull {
+        let point_i32 = _2(point.0.map(|c| c as i32));
+        modify_pixel(point_i32, [0., 1., 0.]);
     }
-    const SIZE: i32 = 2;
-    for (dy, dx) in iproduct!(-SIZE..=SIZE, -SIZE..=SIZE) {
-        if let Some(index) = index(dimensions, center_i32 + _2([dx, dy])) {
-            pixels[index + 0] = 1.;
-            pixels[index + 1] = 1.;
-            pixels[index + 2] = 1.;
-        }
+    let center_i32 = _2(center.0.map(|c| c as i32));
+    let size = 2;
+    for (dy, dx) in iproduct!(-size..=size, -size..=size) {
+        modify_pixel(center_i32 + _2([dx, dy]), [1., 1., 1.]);
     }
     Some(mean_size_square.sqrt())
 }
@@ -192,7 +181,6 @@ pub fn make_directory(
             let mut results = results.lock().unwrap();
             results.extend(local_results);
         });
-
         handles.push(handle);
     }
     for handle in handles {
