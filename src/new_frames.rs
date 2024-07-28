@@ -28,7 +28,7 @@ fn new_frame(
     threshold: color::Threshold,
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
-    let mut positions = color::hue_filter(image, color, threshold);
+    let mut positions = color::filter(image, color, threshold);
     if positions.len() == 0 {
         return None;
     }

@@ -29,7 +29,7 @@ pub fn distance(color1: _3<f32>, color2: _3<f32>) -> Distance {
     Distance { hue, sl, rgb }
 }
 
-pub fn hue_filter(
+pub fn filter(
     image: &mut super::image::Image,
     color: _3<f32>,
     threshold: Threshold,
