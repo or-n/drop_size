@@ -29,14 +29,14 @@ fn new_frame(
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
     let mut positions = color::filter(image, color, threshold);
-    if positions.len() == 0 {
-        return None;
-    }
-    let median = median(&mut positions);
+    let median = median(&mut positions)?;
     positions.retain(|position| {
         (*position - median).length_squared()
             < size_overestimate * size_overestimate
     });
+    if positions.len() == 0 {
+        return None;
+    }
     let hull = convex_hull(&positions);
     let dense_hull = insert_intermediate_points(&hull, 0.1);
     let n = dense_hull.len();
@@ -67,8 +67,8 @@ fn new_frame(
         higher_quartile: distances_squared[(n * 3) / 4].sqrt(),
         max: distances_squared[n - 1].sqrt(),
         mean: mean.sqrt(),
-        center_x: center.0[0],
-        center_y: center.0[1],
+        center_x: center[0],
+        center_y: center[1],
     })
 }
 
