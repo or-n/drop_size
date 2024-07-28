@@ -1,7 +1,6 @@
 use color::hsl::linear::*;
 use color::hsl::*;
 use color::rgb::*;
-use itertools::iproduct;
 use num::operation::length::*;
 use num::point::{_2::*, _3::*};
 
@@ -35,24 +34,28 @@ pub fn hue_filter(
     color: _3<f32>,
     threshold: Threshold,
 ) -> Vec<_2<f32>> {
-    iproduct!(
-        0..image.dimensions.height as i32,
-        0..image.dimensions.width as i32
-    )
-    .flat_map(|(y, x)| {
-        let point = _2([x, y]);
-        if let Some(pixel_color) = image.get_pixel(point) {
-            let distance = distance(color, pixel_color);
+    let mut x = 0;
+    let mut y = 0;
+    let mut positions = Vec::new();
+    for pixel in image.pixels.chunks_exact_mut(4) {
+        if let [r, g, b, _a] = pixel {
+            let distance = distance(color, _3([*r, *g, *b]));
             if distance.hue > threshold.hue
                 || distance.sl > threshold.sl
                 || distance.rgb > threshold.rgb
             {
-                image.set_pixel(point, _3([0., 0., 0.]))
+                *r = 0.0;
+                *g = 0.0;
+                *b = 0.0;
             } else {
-                return Some(_2(point.0.map(|c| c as f32)));
+                positions.push(_2([x as f32, y as f32]));
+            }
+            x += 1;
+            if x == image.dimensions.width {
+                x = 0;
+                y += 1;
             }
         }
-        None
-    })
-    .collect()
+    }
+    positions
 }
