@@ -62,7 +62,10 @@ pub fn filter(
 
 pub fn blend(color1: _4<f32>, color2: _4<f32>) -> _4<f32> {
     let a1 = color1[3];
-    let a2_scaled = color2[3] * a1.complement();
+    let a2 = color2[3];
+    assert!(a1 >= 0. && a1 <= 1.);
+    assert!(a2 >= 0. && a2 <= 1.);
+    let a2_scaled = a2 * a1.complement();
     let a = a1 * a2_scaled;
     _4([
         (color1[0] * a1 + color2[0] * a2_scaled) / a,
