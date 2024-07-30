@@ -63,6 +63,12 @@ pub fn filter(
 pub fn blend(color1: _4<f32>, color2: _4<f32>) -> _4<f32> {
     let a1 = color1[3];
     let a2 = color2[3];
+    if a1 < f32::EPSILON {
+        panic!("alpha1 close to 0: {a1}");
+    }
+    if a2 < f32::EPSILON {
+        panic!("alpha2 close to 0: {a2}");
+    }
     assert!(a1 >= 0. && a1 <= 1.);
     assert!(a2 >= 0. && a2 <= 1.);
     let a2_scaled = a2 * a1.complement();
