@@ -1,3 +1,4 @@
+use arrayref::{array_mut_ref, array_ref};
 use num::point::{_2::*, _3::*};
 use pixels;
 use pixels::dimensions::Dimensions;
@@ -24,20 +25,14 @@ impl Image {
 
     #[inline]
     pub fn get_pixel(&self, point: _2<i32>) -> Option<_3<f32>> {
-        self.index(point).map(|index| {
-            let r = self.pixels[index + 0];
-            let g = self.pixels[index + 1];
-            let b = self.pixels[index + 2];
-            _3([r, g, b])
-        })
+        self.index(point)
+            .map(|index| _3(*array_ref![self.pixels, index, 3]))
     }
 
     #[inline]
     pub fn set_pixel(&mut self, point: _2<i32>, color: _3<f32>) {
         if let Some(index) = self.index(point) {
-            self.pixels[index + 0] = color.0[0];
-            self.pixels[index + 1] = color.0[1];
-            self.pixels[index + 2] = color.0[2];
+            *array_mut_ref![self.pixels, index, 3] = color.0;
         }
     }
 }
