@@ -24,7 +24,6 @@ struct Result<T> {
 }
 
 fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
-    let n = image.pixels.len();
     if image.dimensions != image_before.dimensions {
         return None;
     }
@@ -35,9 +34,6 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         color_before[3] *= 0.5;
         let new_color = color::blend(color::invert(color_before), color);
         *pixel = new_color.0;
-    }
-    if n != image.pixels.len() {
-        panic!("image pixels len changed: {}, not {n}", image.pixels.len());
     }
     Some(())
 }
@@ -136,8 +132,8 @@ pub fn make_directory(
                 .expect("read");
                 (index, Image { pixels, dimensions })
             };
-            let before = 10;
             for frame in start..=end {
+                let before = (frame / 2).max(1);
                 if frame <= before {
                     continue;
                 }
