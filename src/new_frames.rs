@@ -1,6 +1,6 @@
 use crate::paths::*;
 use crate::utils::{color, convex_hull::*, image::*, median::*};
-use arrayref::array_ref;
+use arrayref::{array_mut_ref, array_ref};
 use itertools::iproduct;
 use num::interpolate::*;
 use num::operation::length::*;
@@ -28,10 +28,12 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         return None;
     }
     for i in (0..image.pixels.len()).step_by(4) {
-        let color = _4(*array_ref![image.pixels, i, 4]);
+        let pixel: &mut [f32; 4] = array_mut_ref![image.pixels, i, 4];
+        let color = _4(*pixel);
         let mut color_before = _4(*array_ref![image_before.pixels, i, 4]);
         color_before[3] *= 0.5;
         let new_color = color::blend(color, color::invert(color_before));
+        *pixel = new_color.0;
     }
     Some(())
 }
