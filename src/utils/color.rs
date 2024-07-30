@@ -74,12 +74,13 @@ pub fn blend(up: _4<f32>, down: _4<f32>) -> _4<f32> {
 
 pub fn delta_blend(up: _4<f32>, down: _4<f32>) -> _4<f32> {
     let up_alpha = up[3];
-    let down_alpha = down[3];
+    let down_alpha_scaled = down[3] * up_alpha.complement();
+    let alpha = up_alpha + down_alpha_scaled;
     _4([
         (up[0] * up_alpha - down[0] * down_alpha).abs(),
         (up[1] * up_alpha - down[1] * down_alpha).abs(),
         (up[2] * up_alpha - down[2] * down_alpha).abs(),
-        1.,
+        alpha,
     ])
 }
 
