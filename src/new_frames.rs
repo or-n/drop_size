@@ -34,6 +34,15 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         let mut color_before = _4(*array_ref![image_before.pixels, i, 4]);
         color_before[3] *= 0.5;
         let new_color = color::blend(color, color::invert(color_before));
+        let component = |c, name| {
+            if c < 0. || c > 1. {
+                panic!("component {name} not in the range (0, 1)");
+            }
+        };
+        component(new_color[0], "r");
+        component(new_color[1], "g");
+        component(new_color[2], "b");
+        component(new_color[3], "a");
         *pixel = new_color.0;
     }
     if n != image.pixels.len() {
