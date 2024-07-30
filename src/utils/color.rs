@@ -60,27 +60,15 @@ pub fn filter(
     positions
 }
 
-pub fn blend(color1: _4<f32>, color2: _4<f32>) -> _4<f32> {
-    let a1 = color1[3];
-    let a2 = color2[3];
-    if a1 < f32::EPSILON {
-        panic!("alpha1 close to 0: {a1}");
-    }
-    if a2 < f32::EPSILON {
-        panic!("alpha2 close to 0: {a2}");
-    }
-    assert!(a1 >= 0. && a1 <= 1.);
-    assert!(a2 >= 0. && a2 <= 1.);
-    let a2_scaled = a2 * a1.complement();
-    let a = a1 + a2_scaled;
-    if a < f32::EPSILON {
-        panic!("alpha close to 0: {a}");
-    }
+pub fn blend(up: _4<f32>, down: _4<f32>) -> _4<f32> {
+    let up_alpha = up[3];
+    let down_alpha_scaled = down[3] * up_alpha.complement();
+    let alpha = up_alpha + down_alpha_scaled;
     _4([
-        (color1[0] * a1 + color2[0] * a2_scaled) / a,
-        (color1[1] * a1 + color2[1] * a2_scaled) / a,
-        (color1[2] * a1 + color2[2] * a2_scaled) / a,
-        a,
+        (up[0] * up_alpha + down[0] * down_alpha_scaled) / alpha,
+        (up[1] * up_alpha + down[1] * down_alpha_scaled) / alpha,
+        (up[2] * up_alpha + down[2] * down_alpha_scaled) / alpha,
+        alpha,
     ])
 }
 
