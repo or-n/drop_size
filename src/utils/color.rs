@@ -44,10 +44,6 @@ pub fn filter(
                 || distance.sl > threshold.sl
                 || distance.rgb > threshold.rgb
             {
-                *r = 0.0;
-                *g = 0.0;
-                *b = 0.0;
-            } else {
                 positions.push(_2([x as f32, y as f32]));
             }
             x += 1;
