@@ -36,7 +36,7 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         let new_color = color::blend(color, color::invert(color_before));
         let component = |c, name| {
             if c < 0. || c > 1. {
-                panic!("component {name} not in the range (0, 1)");
+                panic!("component {name} not in the range (0, 1): {c}");
             }
         };
         component(new_color[0], "r");
