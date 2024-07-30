@@ -45,10 +45,12 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
 
 fn new_frame(
     image: &mut Image,
+    image_before: &Image,
     color: _3<f32>,
     threshold: color::Threshold,
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
+    frame_delta(image, image_before)?;
     let mut positions = color::filter(image, color, threshold);
     let median = median(&mut positions)?;
     positions.retain(|position| {
@@ -148,7 +150,13 @@ pub fn make_directory(
                 );
                 let (_, image_before) = load(frame - before);
                 let (index, mut image) = load(frame);
-                if let Some(result) = frame_delta(&mut image, &image_before) {
+                if let Some(result) = new_frame(
+                    &mut image,
+                    &image_before,
+                    color,
+                    threshold,
+                    size_overestimate,
+                ) {
                     local_results.push((frame, result));
                 }
                 if make_new_frames {
@@ -171,7 +179,7 @@ pub fn make_directory(
     }
     let mut results = results.lock().unwrap();
     results.sort_by(|a, b| a.0.cmp(&b.0));
-    /*let sizes_file =
+    let sizes_file =
         std::fs::File::create(sizes_file(file)).expect("sizes file");
     let mut writer = std::io::BufWriter::new(sizes_file);
     writeln!(writer, "frame,min,lower_quartile,median,higher_quartile,max,mean,center_x,center_y")
@@ -192,5 +200,5 @@ pub fn make_directory(
         .collect::<Vec<_>>()
         .join(",");
         writeln!(writer, "{frame},{fields}").expect("size");
-    }*/
+    }
 }
