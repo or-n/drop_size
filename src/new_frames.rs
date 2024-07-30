@@ -130,16 +130,16 @@ pub fn make_directory(
                 .expect("read");
                 (index, Image { pixels, dimensions })
             };
+            let before = 10;
             for frame in start..=end {
-                let frame_before = frame - 10;
-                if frame_before < 1 {
+                if frame <= before {
                     continue;
                 }
                 let color = f32::interpolate(
                     f32_ratio(frame - 1, fcount - 1),
                     &[start_color, end_color],
                 );
-                let (_, image_before) = load(frame_before);
+                let (_, image_before) = load(frame - before);
                 let (index, mut image) = load(frame);
                 if let Some(result) = frame_delta(&mut image, &image_before) {
                     local_results.push((frame, result));
