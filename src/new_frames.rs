@@ -33,7 +33,12 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         let mut color_before = _4(*array_ref![image_before.pixels, i, 4]);
         color_before[3] *= 0.5;
         let new_color = color::blend(color::invert(color_before), color);
-        *pixel = new_color.0.map(|c| c.powf(4.));
+        let shift = 0.5;
+        let shift_inverse = 1.0 / shift;
+        let scale_fix = shift_inverse / (shift_inverse - 1.);
+        *pixel = new_color
+            .0
+            .map(|c| ((c - shift).max(0.) * scale_fix).powf(0.5 / c));
     }
     Some(())
 }
