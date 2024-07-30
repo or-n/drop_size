@@ -31,8 +31,9 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         let pixel: &mut [f32; 4] = array_mut_ref![image.pixels, i, 4];
         let color = _4(*pixel);
         let mut color_before = _4(*array_ref![image_before.pixels, i, 4]);
-        let new_color = color::delta_blend(color::invert(color_before), color);
-        *pixel = new_color.0;
+        color_before[3] *= 0.5;
+        let new_color = color::blend(color::invert(color_before), color);
+        *pixel = new_color.0.map(|c| c.powf(10.));
     }
     Some(())
 }
