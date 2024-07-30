@@ -66,6 +66,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayref"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d151e35f61089500b617991b791fc8bfd237ae50cd5950803758a179b41e67a"
+
+[[package]]
 name = "autocfg"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -206,6 +212,7 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 name = "drop_size"
 version = "0.1.0"
 dependencies = [
+ "arrayref",
  "clap",
  "clap_derive",
  "color",
@@ -268,7 +275,7 @@ dependencies = [
 [[package]]
 name = "frames"
 version = "0.1.0"
-source = "git+https://github.com/or-n/rust-action-utils.git#405e87659e6507ced025ceb891a03739f009428b"
+source = "git+https://github.com/or-n/rust-action-utils.git#da7eec957ea161615e18bedbd2d6d6f2eeba888f"
 
 [[package]]
 name = "gif"
@@ -393,7 +400,7 @@ dependencies = [
 [[package]]
 name = "pixels"
 version = "0.1.0"
-source = "git+https://github.com/or-n/rust-action-utils.git#405e87659e6507ced025ceb891a03739f009428b"
+source = "git+https://github.com/or-n/rust-action-utils.git#da7eec957ea161615e18bedbd2d6d6f2eeba888f"
 dependencies = [
  "image",
 ]

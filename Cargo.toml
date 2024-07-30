@@ -11,4 +11,5 @@ color = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
 clap = { version = "4.5.9", features = ["derive"]}
 clap_derive = { version = "4.5.8" }
 itertools = "0.13.0"
+arrayref = "0.3.8"
 

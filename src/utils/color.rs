@@ -1,8 +1,8 @@
 use color::hsl::linear::*;
 use color::hsl::*;
 use color::rgb::*;
-use num::operation::length::*;
-use num::point::{_2::*, _3::*};
+use num::operation::{complement::*, length::*};
+use num::point::{_2::*, _3::*, _4::*};
 
 pub struct Distance {
     hue: f32,
@@ -58,4 +58,25 @@ pub fn filter(
         }
     }
     positions
+}
+
+pub fn blend(color1: _4<f32>, color2: _4<f32>) -> _4<f32> {
+    let a1 = color1[3];
+    let a2_scaled = color2[3] * a1.complement();
+    let a = a1 * a2_scaled;
+    _4([
+        (color1[0] * a1 + color2[0] * a2_scaled) / a,
+        (color1[1] * a1 + color2[1] * a2_scaled) / a,
+        (color1[2] * a1 + color2[2] * a2_scaled) / a,
+        a,
+    ])
+}
+
+pub fn invert(color: _4<f32>) -> _4<f32> {
+    _4([
+        color[0].complement(),
+        color[1].complement(),
+        color[2].complement(),
+        color[3],
+    ])
 }

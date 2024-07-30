@@ -5,17 +5,14 @@ use std::cmp::Ordering::Equal;
 
 type T = f32;
 
+#[inline]
 fn polar_angle(a: &_2<T>, b: &_2<T>) -> T {
-    let [a0, a1] = a.0;
-    let [b0, b1] = b.0;
-    (a1 - b1).atan2(a0 - b0)
+    (a[1] - b[1]).atan2(a[0] - b[0])
 }
 
+#[inline]
 fn axis2_product(a: &_2<T>, b: &_2<T>, c: &_2<T>) -> T {
-    let [a0, a1] = a.0;
-    let [b0, b1] = b.0;
-    let [c0, c1] = c.0;
-    (b0 - a0) * (c1 - a1) - (c0 - a0) * (b1 - a1)
+    (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
 }
 
 pub fn convex_hull(points: &Vec<_2<T>>) -> Vec<_2<T>> {
@@ -24,13 +21,9 @@ pub fn convex_hull(points: &Vec<_2<T>>) -> Vec<_2<T>> {
     }
     let min_y_point = points
         .iter()
-        .min_by(|a, b| {
-            let [a0, a1] = a.0;
-            let [b0, b1] = b.0;
-            match (-a1).partial_cmp(&-b1).unwrap_or(Equal) {
-                Equal => a0.partial_cmp(&b0).unwrap_or(Equal),
-                ordering => ordering,
-            }
+        .min_by(|a, b| match (-a[1]).partial_cmp(&-b[1]).unwrap_or(Equal) {
+            Equal => a[0].partial_cmp(&b[0]).unwrap_or(Equal),
+            ordering => ordering,
         })
         .unwrap();
     let mut sorted_points = points.clone();
