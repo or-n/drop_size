@@ -24,6 +24,7 @@ struct Result<T> {
 }
 
 fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
+    let n = image.pixels.len();
     if image.dimensions != image_before.dimensions {
         return None;
     }
@@ -34,6 +35,9 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         color_before[3] *= 0.5;
         let new_color = color::blend(color, color::invert(color_before));
         *pixel = new_color.0;
+    }
+    if n != image.pixels.len() {
+        panic!("image pixels len changed: {}, not {n}", image.pixels.len());
     }
     Some(())
 }
