@@ -12,6 +12,18 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+#[derive(Clone)]
+pub struct ThreadData {
+    pub file: String,
+    pub fcount: u32,
+    pub start_color: _3<f32>,
+    pub end_color: _3<f32>,
+    pub frame_delta_threshold: f32,
+    pub threshold: color::Threshold,
+    pub size_overestimate: f32,
+    pub make_new_frames: bool,
+}
+
 struct Result<T, const N: usize> {
     samples: [T; N],
     mean: T,
@@ -107,94 +119,94 @@ fn new_frame<const N: usize>(
     })
 }
 
-pub fn make_directory(
-    file: &str,
-    fcount: u32,
-    start_color: _3<f32>,
-    end_color: _3<f32>,
-    frame_delta_threshold: f32,
-    threshold: color::Threshold,
-    size_overestimate: f32,
-    threads: u32,
-    make_new_frames: bool,
-) {
-    let old_frames_dir = old_frames_dir(file);
-    let new_frames_dir = new_frames_dir(file);
-    let old_frame_file = Arc::new(format!("{old_frames_dir}/{file}"));
-    let new_frame_file = Arc::new(format!("{new_frames_dir}/{file}"));
+fn thread(
+    range: (u32, u32),
+    data: ThreadData,
+) -> std::thread::JoinHandle<Vec<(u32, Result<f32, 5>)>> {
+    std::thread::spawn(move || {
+        let index_digits = (data.fcount.ilog10() + 1) as usize;
+        let old_frame_file =
+            format!("{}/{}", old_frames_dir(&data.file), data.file);
+        let new_frame_file =
+            format!("{}/{}", new_frames_dir(&data.file), data.file);
+        let mut local_results = Vec::new();
+        let load = |frame| {
+            let index = format!("{:0width$}", frame, width = index_digits);
+            let (dimensions, pixels) = pixels::read::f32_array(&format!(
+                "{old_frame_file}_{index}.jpg"
+            ))
+            .expect("read");
+            (index, Image { pixels, dimensions })
+        };
+        for frame in range.0..=range.1 {
+            let before = (frame / 2).max(1);
+            if frame <= before {
+                continue;
+            }
+            let color = f32::interpolate(
+                f32_ratio(frame - 1, data.fcount - 1),
+                &[data.start_color, data.end_color],
+            );
+            let (_, image_before) = load(frame - before);
+            let (index, mut image) = load(frame);
+            if let Some(result) = new_frame::<5>(
+                &mut image,
+                &image_before,
+                color,
+                data.frame_delta_threshold,
+                data.threshold,
+                data.size_overestimate,
+            ) {
+                local_results.push((frame, result));
+            }
+            if data.make_new_frames {
+                pixels::write::f32_array(
+                    image.dimensions,
+                    image.pixels,
+                    &format!("{new_frame_file}_{index}.jpg"),
+                )
+                .expect("dimensions")
+                .expect("save");
+            }
+        }
+        local_results
+    })
+}
+
+pub fn make_directory(thread_data: ThreadData, threads: u32) {
+    let old_frames_dir = old_frames_dir(&thread_data.file);
+    let new_frames_dir = new_frames_dir(&thread_data.file);
+    let old_frame_file =
+        Arc::new(format!("{old_frames_dir}/{}", thread_data.file));
+    let new_frame_file =
+        Arc::new(format!("{new_frames_dir}/{}", thread_data.file));
     if !std::path::Path::new(&old_frames_dir).exists() {
         println!("{old_frames_dir} does not exist");
         return;
     }
     std::fs::create_dir_all(&new_frames_dir).expect("new frames directory");
-    let index_digits = (fcount.ilog10() + 1) as usize;
-    let chunk_size = (fcount + threads - 1) / threads;
-    let results = Arc::new(Mutex::new(Vec::new()));
-    let mut handles = vec![];
-    print!("saving sizes");
-    if make_new_frames {
-        print!(" and new frames");
-    }
-    println!();
-    for i in 0..threads {
-        let results = Arc::clone(&results);
-        let old_frame_file = Arc::clone(&old_frame_file);
-        let new_frame_file = Arc::clone(&new_frame_file);
-        let start = i * chunk_size + 1;
-        let end = ((i + 1) * chunk_size).min(fcount);
-        let handle = thread::spawn(move || {
-            let mut local_results = Vec::new();
-            let load = |frame| {
-                let index = format!("{:0width$}", frame, width = index_digits);
-                let (dimensions, pixels) = pixels::read::f32_array(&format!(
-                    "{old_frame_file}_{index}.jpg"
-                ))
-                .expect("read");
-                (index, Image { pixels, dimensions })
-            };
-            for frame in start..=end {
-                let before = (frame / 2).max(1);
-                if frame <= before {
-                    continue;
-                }
-                let color = f32::interpolate(
-                    f32_ratio(frame - 1, fcount - 1),
-                    &[start_color, end_color],
-                );
-                let (_, image_before) = load(frame - before);
-                let (index, mut image) = load(frame);
-                if let Some(result) = new_frame::<5>(
-                    &mut image,
-                    &image_before,
-                    color,
-                    frame_delta_threshold,
-                    threshold,
-                    size_overestimate,
-                ) {
-                    local_results.push((frame, result));
-                }
-                if make_new_frames {
-                    pixels::write::f32_array(
-                        image.dimensions,
-                        image.pixels,
-                        &format!("{new_frame_file}_{index}.jpg"),
-                    )
-                    .expect("dimensions")
-                    .expect("save");
-                }
-            }
-            let mut results = results.lock().unwrap();
-            results.extend(local_results);
-        });
-        handles.push(handle);
-    }
+    let chunk_size = (thread_data.fcount + threads - 1) / threads;
+    let mut results = Vec::new();
+    let and = thread_data.make_new_frames;
+    println!("saving sizes{}", if and { " and new frames" } else { "" });
+    let handles: Vec<_> = (0..threads)
+        .map(|i| {
+            thread(
+                (
+                    i * chunk_size + 1,
+                    ((i + 1) * chunk_size).min(thread_data.fcount),
+                ),
+                thread_data.clone(),
+            )
+        })
+        .collect();
     for handle in handles {
-        handle.join().unwrap();
+        let local_results = handle.join().unwrap();
+        results.extend(local_results);
     }
-    let mut results = results.lock().unwrap();
     results.sort_by(|a, b| a.0.cmp(&b.0));
-    let sizes_file =
-        std::fs::File::create(sizes_file(file)).expect("sizes file");
+    let sizes_file = std::fs::File::create(sizes_file(&thread_data.file))
+        .expect("sizes file");
     let mut writer = std::io::BufWriter::new(sizes_file);
     writeln!(writer, "frame,min,lower_quartile,median,higher_quartile,max,mean,center_x,center_y")
         .expect("header");
