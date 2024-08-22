@@ -46,6 +46,14 @@ struct Args {
         long,
         value_name = "number",
         required_if_eq("make_sizes", "true"),
+        help = "threshold for frame delta rgb distance to black (e.g. 0.04)"
+    )]
+    frame_delta_threshold: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_sizes", "true"),
         help = "threshold for hue (e.g. 0.04)"
     )]
     hue_threshold: Option<f32>,
@@ -113,6 +121,7 @@ fn main() {
             fcount,
             color(args.start_color),
             color(args.end_color),
+            args.frame_delta_threshold.expect("frame delta threshold"),
             utils::color::Threshold {
                 hue: args.hue_threshold.expect("hue threshold"),
                 sl: args.sl_threshold.expect("sl threshold"),

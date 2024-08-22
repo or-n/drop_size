@@ -27,10 +27,9 @@ struct Result<T> {
     center_y: T,
 }
 
-fn threshold(color: _4<f32>) -> bool {
+fn black_distance(color: _4<f32>) -> color::Distance {
     let [r, g, b, _] = *color;
-    let d = color::distance(_3([0., 0., 0.]), _3([r, g, b]));
-    d.rgb < 0.04
+    color::distance(_3([0., 0., 0.]), _3([r, g, b]))
 }
 
 fn blend(color_before: _4<f32>, color: _4<f32>) -> _4<f32> {
@@ -41,7 +40,11 @@ fn blend(color_before: _4<f32>, color: _4<f32>) -> _4<f32> {
     //.map(|c| ((c - shift).max(0.) * scale_fix).powf(0.5));
 }
 
-fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
+fn frame_delta(
+    image: &mut Image,
+    image_before: &Image,
+    threshold: f32,
+) -> Option<()> {
     if image.dimensions != image_before.dimensions {
         return None;
     }
@@ -50,7 +53,7 @@ fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
         let color = _4(*pixel);
         let color_before = _4(*array_ref![image_before.pixels, i, 4]);
         let blend_color = blend(color_before, color);
-        *pixel = if threshold(blend_color) {
+        *pixel = if black_distance(blend_color).rgb < threshold {
             [0., 0., 0., 1.]
         } else {
             *color
@@ -63,10 +66,11 @@ fn new_frame(
     image: &mut Image,
     image_before: &Image,
     color: _3<f32>,
+    frame_delta_threshold: f32,
     threshold: color::Threshold,
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
-    frame_delta(image, image_before)?;
+    frame_delta(image, image_before, frame_delta_threshold)?;
     let mut positions = color::filter(image, color, threshold);
     let median = median(&mut positions)?;
     positions.retain(|position| {
@@ -119,6 +123,7 @@ pub fn make_directory(
     fcount: u32,
     start_color: _3<f32>,
     end_color: _3<f32>,
+    frame_delta_threshold: f32,
     threshold: color::Threshold,
     size_overestimate: f32,
     threads: u32,
@@ -173,6 +178,7 @@ pub fn make_directory(
                     &mut image,
                     &image_before,
                     color,
+                    frame_delta_threshold,
                     threshold,
                     size_overestimate,
                 ) {
