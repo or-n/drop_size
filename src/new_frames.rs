@@ -9,8 +9,6 @@ use num::ratio::f32::*;
 use num::scale::*;
 use pixels;
 use std::io::Write;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 #[derive(Clone)]
 pub struct ThreadData {
