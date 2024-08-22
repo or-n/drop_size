@@ -120,10 +120,9 @@ fn new_frame<const N: usize>(
 }
 
 fn thread(
-    results: Arc<Mutex<Vec<(u32, Result<f32, 5>)>>>,
     range: (u32, u32),
     data: ThreadData,
-) -> std::thread::JoinHandle<()> {
+) -> std::thread::JoinHandle<Vec<(u32, Result<f32, 5>)>> {
     std::thread::spawn(move || {
         let index_digits = (data.fcount.ilog10() + 1) as usize;
         let old_frame_file =
@@ -170,8 +169,7 @@ fn thread(
                 .expect("save");
             }
         }
-        let mut results = results.lock().unwrap();
-        results.extend(local_results);
+        local_results
     })
 }
 
@@ -184,13 +182,12 @@ pub fn make_directory(thread_data: ThreadData, threads: u32) {
     }
     std::fs::create_dir_all(&new_frames_dir).expect("new frames directory");
     let chunk_size = (thread_data.fcount + threads - 1) / threads;
-    let results = Arc::new(Mutex::new(Vec::new()));
+    let mut results = Vec::new();
     let and = thread_data.make_new_frames;
     println!("saving sizes{}", if and { " and new frames" } else { "" });
     let handles: Vec<_> = (0..threads)
         .map(|i| {
             thread(
-                Arc::clone(&results),
                 (
                     i * chunk_size + 1,
                     ((i + 1) * chunk_size).min(thread_data.fcount),
@@ -200,10 +197,8 @@ pub fn make_directory(thread_data: ThreadData, threads: u32) {
         })
         .collect();
     for handle in handles {
-        handle.join().unwrap();
+        results.extend(handle.join().unwrap());
     }
-    let mut results = results.lock().unwrap();
-    results.sort_by(|a, b| a.0.cmp(&b.0));
     let sizes_file = std::fs::File::create(sizes_file(&thread_data.file))
         .expect("sizes file");
     let mut writer = std::io::BufWriter::new(sizes_file);
