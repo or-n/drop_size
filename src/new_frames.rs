@@ -12,16 +12,8 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-struct Samples<T> {
-    min: T,
-    lower_quartile: T,
-    median: T,
-    higher_quartile: T,
-    max: T,
-}
-
-struct Result<T> {
-    samples: Samples<T>,
+struct Result<T, const N: usize> {
+    samples: [T; N],
     mean: T,
     center_x: T,
     center_y: T,
@@ -62,14 +54,14 @@ fn frame_delta(
     Some(())
 }
 
-fn new_frame(
+fn new_frame<const N: usize>(
     image: &mut Image,
     image_before: &Image,
     color: _3<f32>,
     frame_delta_threshold: f32,
     threshold: color::Threshold,
     size_overestimate: f32,
-) -> Option<Result<f32>> {
+) -> Option<Result<f32, N>> {
     frame_delta(image, image_before, frame_delta_threshold)?;
     let mut positions = color::filter(image, color, threshold);
     let median = median(&mut positions)?;
@@ -103,15 +95,12 @@ fn new_frame(
     for (dy, dx) in iproduct!(-size..=size, -size..=size) {
         image.set_pixel(center_i32 + _2([dx, dy]), _3([1., 1., 1.]));
     }
-    let samples = Samples {
-        min: distances_squared[0].sqrt(),
-        lower_quartile: distances_squared[n / 4].sqrt(),
-        median: distances_squared[n / 2].sqrt(),
-        higher_quartile: distances_squared[(n * 3) / 4].sqrt(),
-        max: distances_squared[n - 1].sqrt(),
-    };
     Some(Result {
-        samples,
+        samples: (0..N)
+            .map(|i| distances_squared[i * (n - 1) / (N - 1)].sqrt())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap(),
         mean: mean.sqrt(),
         center_x: center[0],
         center_y: center[1],
@@ -174,7 +163,7 @@ pub fn make_directory(
                 );
                 let (_, image_before) = load(frame - before);
                 let (index, mut image) = load(frame);
-                if let Some(result) = new_frame(
+                if let Some(result) = new_frame::<5>(
                     &mut image,
                     &image_before,
                     color,
@@ -211,11 +200,11 @@ pub fn make_directory(
         .expect("header");
     for (frame, result) in results.iter() {
         let fields = [
-            result.samples.min,
-            result.samples.lower_quartile,
-            result.samples.median,
-            result.samples.higher_quartile,
-            result.samples.max,
+            result.samples[0],
+            result.samples[1],
+            result.samples[2],
+            result.samples[3],
+            result.samples[4],
             result.mean,
             result.center_x,
             result.center_y,
