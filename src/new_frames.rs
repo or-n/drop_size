@@ -166,14 +166,16 @@ pub fn make_directory(thread_data: ThreadData, threads: u32) {
     let mut results = Vec::new();
     let and = thread_data.make_new_frames;
     println!("saving sizes{}", if and { " and new frames" } else { "" });
-    let handles = (0..threads).map(|i| {
-        let range = (
-            i * chunk_size + 1,
-            ((i + 1) * chunk_size).min(thread_data.fcount),
-        );
-        let data = thread_data.clone();
-        std::thread::spawn(move || thread(range, data))
-    });
+    let handles: Vec<_> = (0..threads)
+        .map(|i| {
+            let range = (
+                i * chunk_size + 1,
+                ((i + 1) * chunk_size).min(thread_data.fcount),
+            );
+            let data = thread_data.clone();
+            std::thread::spawn(move || thread(range, data))
+        })
+        .collect();
     for handle in handles {
         results.extend(handle.join().unwrap());
     }
