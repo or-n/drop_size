@@ -123,11 +123,8 @@ fn thread(range: (u32, u32), data: ThreadData) -> Vec<(u32, Result<f32, 5>)> {
                 .expect("read");
         (index, Image { pixels, dimensions })
     };
-    for frame in range.0..=range.1 {
+    for frame in range.0.max(2)..=range.1 {
         let before = (frame / 2).max(1);
-        if frame <= before {
-            continue;
-        }
         let color = f32::interpolate(
             f32_ratio(frame - 1, data.fcount - 1),
             &[data.start_color, data.end_color],
