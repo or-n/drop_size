@@ -34,14 +34,6 @@ fn black_distance(color: _4<f32>) -> color::Distance {
     color::distance(_3([0., 0., 0.]), _3([r, g, b]))
 }
 
-fn blend(color_before: _4<f32>, color: _4<f32>) -> _4<f32> {
-    color::delta_blend(color_before, color)
-    //let shift = 0.025;
-    //let shift_inverse = 1.0 / shift;
-    //let scale_fix = shift_inverse / (shift_inverse - 1.);
-    //.map(|c| ((c - shift).max(0.) * scale_fix).powf(0.5));
-}
-
 fn frame_delta(
     image: &mut Image,
     image_before: &Image,
@@ -54,7 +46,7 @@ fn frame_delta(
         let pixel: &mut [f32; 4] = array_mut_ref![image.pixels, i, 4];
         let color = _4(*pixel);
         let color_before = _4(*array_ref![image_before.pixels, i, 4]);
-        let blend_color = blend(color_before, color);
+        let blend_color = color::delta_blend(color_before, color);
         *pixel = if black_distance(blend_color).rgb < threshold {
             [0., 0., 0., 1.]
         } else {
