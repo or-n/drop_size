@@ -12,12 +12,16 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-struct Result<T> {
+struct Samples<T> {
     min: T,
     lower_quartile: T,
     median: T,
     higher_quartile: T,
     max: T,
+}
+
+struct Result<T> {
+    samples: Samples<T>,
     mean: T,
     center_x: T,
     center_y: T,
@@ -25,7 +29,7 @@ struct Result<T> {
 
 fn threshold(color: _4<f32>) -> bool {
     let [r, g, b, _] = *color;
-    let d = color::distance(_3([0.,0.,0.]), _3([r, g, b]));
+    let d = color::distance(_3([0., 0., 0.]), _3([r, g, b]));
     d.rgb < 0.04
 }
 
@@ -95,12 +99,15 @@ fn new_frame(
     for (dy, dx) in iproduct!(-size..=size, -size..=size) {
         image.set_pixel(center_i32 + _2([dx, dy]), _3([1., 1., 1.]));
     }
-    Some(Result {
+    let samples = Samples {
         min: distances_squared[0].sqrt(),
         lower_quartile: distances_squared[n / 4].sqrt(),
         median: distances_squared[n / 2].sqrt(),
         higher_quartile: distances_squared[(n * 3) / 4].sqrt(),
         max: distances_squared[n - 1].sqrt(),
+    };
+    Some(Result {
+        samples,
         mean: mean.sqrt(),
         center_x: center[0],
         center_y: center[1],
@@ -198,11 +205,11 @@ pub fn make_directory(
         .expect("header");
     for (frame, result) in results.iter() {
         let fields = [
-            result.min,
-            result.lower_quartile,
-            result.median,
-            result.higher_quartile,
-            result.max,
+            result.samples.min,
+            result.samples.lower_quartile,
+            result.samples.median,
+            result.samples.higher_quartile,
+            result.samples.max,
             result.mean,
             result.center_x,
             result.center_y,
