@@ -1,13 +1,13 @@
 use color::hsl::linear::*;
 use color::hsl::*;
 use color::rgb::*;
-use num::operation::length::*;
-use num::point::{_2::*, _3::*};
+use num::operation::{complement::*, length::*};
+use num::point::{_2::*, _3::*, _4::*};
 
 pub struct Distance {
-    hue: f32,
-    sl: f32,
-    rgb: f32,
+    pub hue: f32,
+    pub sl: f32,
+    pub rgb: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -44,10 +44,6 @@ pub fn filter(
                 || distance.sl > threshold.sl
                 || distance.rgb > threshold.rgb
             {
-                *r = 0.0;
-                *g = 0.0;
-                *b = 0.0;
-            } else {
                 positions.push(_2([x as f32, y as f32]));
             }
             x += 1;
@@ -58,4 +54,34 @@ pub fn filter(
         }
     }
     positions
+}
+
+pub fn blend(up: _4<f32>, down: _4<f32>) -> _4<f32> {
+    let up_alpha = up[3];
+    let down_alpha_scaled = down[3] * up_alpha.complement();
+    let alpha = up_alpha + down_alpha_scaled;
+    _4([
+        (up[0] * up_alpha + down[0] * down_alpha_scaled) / alpha,
+        (up[1] * up_alpha + down[1] * down_alpha_scaled) / alpha,
+        (up[2] * up_alpha + down[2] * down_alpha_scaled) / alpha,
+        alpha,
+    ])
+}
+
+pub fn delta_blend(up: _4<f32>, down: _4<f32>) -> _4<f32> {
+    _4([
+        (up[0] - down[0]).abs(),
+        (up[1] - down[1]).abs(),
+        (up[2] - down[2]).abs(),
+        down[3],
+    ])
+}
+
+pub fn invert(color: _4<f32>) -> _4<f32> {
+    _4([
+        color[0].complement(),
+        color[1].complement(),
+        color[2].complement(),
+        color[3],
+    ])
 }

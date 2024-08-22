@@ -1,9 +1,10 @@
 use crate::paths::*;
 use crate::utils::{color, convex_hull::*, image::*, median::*};
+use arrayref::{array_mut_ref, array_ref};
 use itertools::iproduct;
 use num::interpolate::*;
 use num::operation::length::*;
-use num::point::{_2::*, _3::*};
+use num::point::{_2::*, _3::*, _4::*};
 use num::ratio::f32::*;
 use num::scale::*;
 use pixels;
@@ -22,21 +23,55 @@ struct Result<T> {
     center_y: T,
 }
 
+fn threshold(color: _4<f32>) -> bool {
+    let [r, g, b, _] = *color;
+    let d = color::distance(_3([0.,0.,0.]), _3([r, g, b]));
+    d.rgb < 0.04
+}
+
+fn blend(color_before: _4<f32>, color: _4<f32>) -> _4<f32> {
+    color::delta_blend(color_before, color)
+    //let shift = 0.025;
+    //let shift_inverse = 1.0 / shift;
+    //let scale_fix = shift_inverse / (shift_inverse - 1.);
+    //.map(|c| ((c - shift).max(0.) * scale_fix).powf(0.5));
+}
+
+fn frame_delta(image: &mut Image, image_before: &Image) -> Option<()> {
+    if image.dimensions != image_before.dimensions {
+        return None;
+    }
+    for i in (0..image.pixels.len()).step_by(4) {
+        let pixel: &mut [f32; 4] = array_mut_ref![image.pixels, i, 4];
+        let color = _4(*pixel);
+        let color_before = _4(*array_ref![image_before.pixels, i, 4]);
+        let blend_color = blend(color_before, color);
+        *pixel = if threshold(blend_color) {
+            [0., 0., 0., 1.]
+        } else {
+            *color
+        };
+    }
+    Some(())
+}
+
 fn new_frame(
     image: &mut Image,
+    image_before: &Image,
     color: _3<f32>,
     threshold: color::Threshold,
     size_overestimate: f32,
 ) -> Option<Result<f32>> {
+    frame_delta(image, image_before)?;
     let mut positions = color::filter(image, color, threshold);
-    if positions.len() == 0 {
-        return None;
-    }
-    let median = median(&mut positions);
+    let median = median(&mut positions)?;
     positions.retain(|position| {
         (*position - median).length_squared()
             < size_overestimate * size_overestimate
     });
+    if positions.len() == 0 {
+        return None;
+    }
     let hull = convex_hull(&positions);
     let dense_hull = insert_intermediate_points(&hull, 0.1);
     let n = dense_hull.len();
@@ -67,8 +102,8 @@ fn new_frame(
         higher_quartile: distances_squared[(n * 3) / 4].sqrt(),
         max: distances_squared[n - 1].sqrt(),
         mean: mean.sqrt(),
-        center_x: center.0[0],
-        center_y: center.0[1],
+        center_x: center[0],
+        center_y: center[1],
     })
 }
 
@@ -108,20 +143,32 @@ pub fn make_directory(
         let end = ((i + 1) * chunk_size).min(fcount);
         let handle = thread::spawn(move || {
             let mut local_results = Vec::new();
-            for frame in start..=end {
+            let load = |frame| {
                 let index = format!("{:0width$}", frame, width = index_digits);
                 let (dimensions, pixels) = pixels::read::f32_array(&format!(
                     "{old_frame_file}_{index}.jpg"
                 ))
                 .expect("read");
+                (index, Image { pixels, dimensions })
+            };
+            for frame in start..=end {
+                let before = (frame / 2).max(1);
+                if frame <= before {
+                    continue;
+                }
                 let color = f32::interpolate(
                     f32_ratio(frame - 1, fcount - 1),
                     &[start_color, end_color],
                 );
-                let mut image = Image { pixels, dimensions };
-                if let Some(result) =
-                    new_frame(&mut image, color, threshold, size_overestimate)
-                {
+                let (_, image_before) = load(frame - before);
+                let (index, mut image) = load(frame);
+                if let Some(result) = new_frame(
+                    &mut image,
+                    &image_before,
+                    color,
+                    threshold,
+                    size_overestimate,
+                ) {
                     local_results.push((frame, result));
                 }
                 if make_new_frames {
