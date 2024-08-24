@@ -1,8 +1,8 @@
 #!/bin/bash
 
-FILE=IMG_2880.mov
+FILE=$1
 FILE_PATH=results/$FILE
-NAME=hue05sl5
+NAME=$2
 
 mkdir $FILE_PATH/$NAME
 mv $FILE_PATH/$FILE $FILE_PATH/$NAME

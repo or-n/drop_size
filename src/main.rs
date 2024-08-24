@@ -46,6 +46,14 @@ struct Args {
         long,
         value_name = "number",
         required_if_eq("make_sizes", "true"),
+        help = "threshold for frame delta rgb distance to black (e.g. 0.04)"
+    )]
+    frame_delta_threshold: Option<f32>,
+
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_sizes", "true"),
         help = "threshold for hue (e.g. 0.04)"
     )]
     hue_threshold: Option<f32>,
@@ -108,20 +116,25 @@ fn main() {
             let u8 = utils::hex_color::decode(&text).expect("color hex");
             _3(u8.map(|c| c as f32 / 255.))
         };
-        new_frames::make_directory(
-            &file,
+        let thread_data = new_frames::ThreadData {
+            file: file.to_string(),
             fcount,
-            color(args.start_color),
-            color(args.end_color),
-            utils::color::Threshold {
+            start_color: color(args.start_color),
+            end_color: color(args.end_color),
+            frame_delta_threshold: args
+                .frame_delta_threshold
+                .expect("frame delta threshold"),
+            threshold: utils::color::Threshold {
                 hue: args.hue_threshold.expect("hue threshold"),
                 sl: args.sl_threshold.expect("sl threshold"),
                 rgb: args.rgb_threshold.expect("rgb threshold"),
             },
-            args.size_overestimate.expect("size-overestimate"),
-            args.threads.expect("threads"),
-            args.make_new_frames,
-        );
+            size_overestimate: args
+                .size_overestimate
+                .expect("size-overestimate"),
+            make_new_frames: args.make_new_frames,
+        };
+        new_frames::make_directory(thread_data, args.threads.expect("threads"));
     }
     if args.make_video {
         video::make_from_new_frames(&file, fps, fcount);
