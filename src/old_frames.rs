@@ -1,6 +1,11 @@
 use crate::paths::*;
 
-pub fn make_directory(full_path: &str, file: &str, fcount: u32) {
+pub fn make_directory(
+    full_path: &str,
+    file: &str,
+    fcount: u32,
+    ranges: [range::MinSize<u32>; 2],
+) {
     let old_frames_dir = old_frames_dir(file);
     if std::path::Path::new(&old_frames_dir).exists() {
         println!("{old_frames_dir} exists, skipping saving old frames");
@@ -12,6 +17,7 @@ pub fn make_directory(full_path: &str, file: &str, fcount: u32) {
         full_path,
         &format!("{old_frames_dir}/{file}"),
         fcount,
+        ranges,
     )
     .expect("old frames");
 }

@@ -7,6 +7,7 @@ edition = "2021"
 frames = { git = "https://github.com/or-n/rust-action-utils.git" }
 pixels = { git = "https://github.com/or-n/rust-action-utils.git" }
 num = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
+range = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
 color = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
 clap = { version = "4.5.9", features = ["derive"]}
 clap_derive = { version = "4.5.8" }

@@ -29,9 +29,9 @@ struct Result<T, const N: usize> {
     center_y: T,
 }
 
-fn black_distance(color: _4<f32>) -> color::Distance {
+fn black_distance(color: _4<f32>) -> f32 {
     let [r, g, b, _] = *color;
-    color::distance(_3([0., 0., 0.]), _3([r, g, b]))
+    color::rgb_distance(_3([0., 0., 0.]), _3([r, g, b]))
 }
 
 fn frame_delta(
@@ -47,7 +47,7 @@ fn frame_delta(
         let color = _4(*pixel);
         let color_before = _4(*array_ref![image_before.pixels, i, 4]);
         let blend_color = color::delta_blend(color_before, color);
-        *pixel = if black_distance(blend_color).rgb < threshold {
+        *pixel = if black_distance(blend_color) < threshold {
             [0., 0., 0., 1.]
         } else {
             *color
