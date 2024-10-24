@@ -3,6 +3,10 @@
 cargo run --release -- \
  --input-file $1 \
  --make-old-frames \
+ --min-x 0 \
+ --min-y 0 \
+ --size-x 100 \
+ --size-y 100 \
  --make-sizes \
  --frame-delta-threshold 0.04 \
  --start-color "#00457b" \

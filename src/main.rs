@@ -90,16 +90,32 @@ struct Args {
     )]
     threads: Option<u32>,
 
-    #[arg(long, value_name = "number", required_if_eq("make_sizes", "true"))]
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_old_frames", "true")
+    )]
     min_x: u32,
 
-    #[arg(long, value_name = "number", required_if_eq("make_sizes", "true"))]
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_old_frames", "true")
+    )]
     size_x: u32,
 
-    #[arg(long, value_name = "number", required_if_eq("make_sizes", "true"))]
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_old_frames", "true")
+    )]
     min_y: u32,
 
-    #[arg(long, value_name = "number", required_if_eq("make_sizes", "true"))]
+    #[arg(
+        long,
+        value_name = "number",
+        required_if_eq("make_old_frames", "true")
+    )]
     size_y: u32,
 }
 
