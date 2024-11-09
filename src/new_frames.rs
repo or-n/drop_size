@@ -20,6 +20,7 @@ pub struct ThreadData {
     pub threshold: color::Threshold,
     pub size_overestimate: f32,
     pub make_new_frames: bool,
+    pub draw_hull: bool,
 }
 
 struct Result<T, const N: usize> {
@@ -60,16 +61,14 @@ fn new_frame<const N: usize>(
     image: &mut Image,
     image_before: &Image,
     color: _3<f32>,
-    frame_delta_threshold: f32,
-    threshold: color::Threshold,
-    size_overestimate: f32,
+    data: &ThreadData,
 ) -> Option<Result<f32, N>> {
-    frame_delta(image, image_before, frame_delta_threshold)?;
-    let mut positions = color::filter(image, color, threshold);
+    frame_delta(image, image_before, data.frame_delta_threshold)?;
+    let mut positions = color::filter(image, color, data.threshold);
     let median = median(&mut positions)?;
     positions.retain(|position| {
         (*position - median).length_squared()
-            < size_overestimate * size_overestimate
+            < data.size_overestimate * data.size_overestimate
     });
     if positions.len() == 0 {
         return None;
@@ -88,9 +87,11 @@ fn new_frame<const N: usize>(
     distances_squared
         .sort_by(|a, b| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal));
     let mean = distances_squared.iter().sum::<f32>() * dense_hull_len_inverse;
-    for point in &dense_hull {
-        let point_i32 = _2(point.0.map(|c| c as i32));
-        image.set_pixel(point_i32, _3([0., 1., 0.]));
+    if data.draw_hull {
+        for point in &dense_hull {
+            let point_i32 = _2(point.0.map(|c| c as i32));
+            image.set_pixel(point_i32, _3([0., 1., 0.]));
+        }
     }
     let center_i32 = _2(center.0.map(|c| c as i32));
     let size = 2;
@@ -131,14 +132,9 @@ fn thread(range: (u32, u32), data: ThreadData) -> Vec<(u32, Result<f32, 5>)> {
         );
         let (_, image_before) = load(frame - before);
         let (index, mut image) = load(frame);
-        if let Some(result) = new_frame::<5>(
-            &mut image,
-            &image_before,
-            color,
-            data.frame_delta_threshold,
-            data.threshold,
-            data.size_overestimate,
-        ) {
+        if let Some(result) =
+            new_frame::<5>(&mut image, &image_before, color, &data)
+        {
             local_results.push((frame, result));
         }
         if data.make_new_frames {

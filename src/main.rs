@@ -117,6 +117,9 @@ struct Args {
         required_if_eq("make_old_frames", "true")
     )]
     size_y: u32,
+
+    #[arg(long, required_if_eq("make_new_frames", "true"))]
+    draw_hull: bool,
 }
 
 fn main() {
@@ -171,6 +174,7 @@ fn main() {
                 .size_overestimate
                 .expect("size-overestimate"),
             make_new_frames: args.make_new_frames,
+            draw_hull: args.draw_hull,
         };
         new_frames::make_directory(thread_data, args.threads.expect("threads"));
     }
